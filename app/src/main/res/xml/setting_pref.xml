@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:apps="http://schemas.android.com/apk/res-auto">
+
+    <PreferenceCategory
+        android:title="@string/setting_notifcation">
+        <com.lc.monitor.settings.CustomEditPreference
+            android:key="pref_alert_phone"
+            android:layout="@layout/setting_editor"
+            apps:editor_icon="@drawable/ic_sms_black_24dp"
+            apps:editor_hint="@string/pref_title_alert_phone_hint"/>
+        <com.lc.monitor.settings.CustomEditPreference
+            android:key="pref_alert_email"
+            android:layout="@layout/setting_editor"
+            apps:editor_icon="@drawable/ic_email_black_24dp"
+            apps:editor_hint="@string/pref_title_alert_email_hint"/>
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/setting_record">
+        <ListPreference
+            android:key="pref_record_time"
+            android:title="@string/pref_title_record_time"
+            android:entries="@array/record_title"
+            android:entryValues="@array/record_value"
+            android:defaultValue="30"/>
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:title="@string/setting_other">
+        <EditTextPreference
+            android:key="pref_storage"
+            android:hint="@string/pref_title_storage_hint"
+            android:title="@string/pref_title_storage"/>
+        <EditTextPreference
+            android:key="pref_monitor_name"
+            android:title="@string/pref_title_storage_name"
+            android:hint="@string/pref_title_storage_name_hint"/>
+    </PreferenceCategory>
+
+    <Preference
+        android:key="pref_about"
+        android:title="@string/pref_title_abount"/>
+
+</PreferenceScreen>

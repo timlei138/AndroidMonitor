@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+
+    <com.lc.monitor.detection.AutoFitTextureView
+        android:id="@+id/preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"/>
+
+    <com.lc.monitor.detection.FaceView
+        android:id="@+id/faceview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center"/>
+
+    <TextView
+        android:id="@+id/monitor_btn"
+        android:layout_width="50dp"
+        android:layout_height="50dp"
+        android:text="@string/monitor_start"
+        android:layout_gravity="bottom|center_horizontal"
+        android:layout_marginBottom="30dp"
+        android:gravity="center"
+        android:padding="5dp"
+        android:clickable="true"
+        android:background="@drawable/bg_monitor_btn"/>
+
+</FrameLayout>
