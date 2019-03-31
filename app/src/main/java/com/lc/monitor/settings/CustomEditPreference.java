@@ -7,13 +7,18 @@ import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import android.support.v7.preference.Preference;
 import android.support.v7.preference.PreferenceViewHolder;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.Switch;
+import android.widget.Toast;
+
 import com.lc.monitor.R;
 
 import java.util.regex.Pattern;
@@ -31,6 +36,11 @@ public class CustomEditPreference extends Preference {
     private boolean savedToggle;
 
     private EditText mEditText;
+
+
+    private boolean dataVaild = false;
+
+    private int inputType;
 
     public CustomEditPreference(Context context) {
         this(context,null);
@@ -52,10 +62,13 @@ public class CustomEditPreference extends Preference {
         mSwitchDefaultValue = typedArray.getBoolean(R.styleable.SettingEditor_switch_stats,false);
         mEditHintStr = typedArray.getString(R.styleable.SettingEditor_editor_hint);
         mIcons = typedArray.getDrawable(R.styleable.SettingEditor_editor_icon);
+        inputType = typedArray.getInt(R.styleable.SettingEditor_input_type,InputType.EMAIL.getValue());
         typedArray.recycle();
         setPersistent(false);
         mSharedPreference = getSharedPreferences();
         key = getKey();
+
+
 
     }
 
@@ -80,16 +93,40 @@ public class CustomEditPreference extends Preference {
         }
         savedToggle = mSharedPreference.getBoolean(key+"_toggle",false);
         switchButton.setChecked(savedToggle);
+
+        if(inputType == InputType.PHONE.getValue()){
+            mEditText.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_PHONETIC);
+        }
     }
+
+
 
 
     private View.OnFocusChangeListener editorFocusChangedListener = new View.OnFocusChangeListener() {
         @Override
         public void onFocusChange(View v, boolean hasFocus) {
+            String input = mEditText.getText().toString();
+            Log.d(TAG,"input "+input);
             if(!hasFocus && !TextUtils.isEmpty(mEditText.getText())){
+                boolean dataVaild = false;
+                if(inputType == InputType.EMAIL.getValue()){
+                    if(checkEmail(input)){
+                        dataVaild = true;
+                    }else{
+                        Toast.makeText(getContext(),"请输入正确的Email地址",Toast.LENGTH_SHORT).show();
+                    }
+                }else if(inputType == InputType.PHONE.getValue()){
+                    if(checkPhone(input)){
+                        dataVaild = true;
+                    }else{
+                        Toast.makeText(getContext(),"请输入正确的电话号码",Toast.LENGTH_SHORT).show();
+                    }
+                }
+                if(dataVaild){
+                    mSharedPreference.edit().putString(key+"_value",mEditText.getText().toString()).commit();
+                    savedValue = mEditText.getText().toString();
+                }
 
-                mSharedPreference.edit().putString(key+"_value",mEditText.getText().toString()).commit();
-                savedValue = mEditText.getText().toString();
             }else{
 
             }
@@ -99,7 +136,7 @@ public class CustomEditPreference extends Preference {
     private CompoundButton.OnCheckedChangeListener checkChangedListener = new CompoundButton.OnCheckedChangeListener() {
         @Override
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            if(savedToggle != isChecked){
+            if(savedToggle != isChecked && dataVaild){
                 mSharedPreference.edit().putBoolean(key+"_toggle",isChecked).commit();
                 savedToggle = isChecked;
             }

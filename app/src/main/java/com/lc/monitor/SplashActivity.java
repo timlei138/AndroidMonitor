@@ -16,6 +16,7 @@ import android.support.annotation.Nullable;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
@@ -50,7 +51,19 @@ public class SplashActivity extends AppCompatActivity {
 
     private void checkPermission(){
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
-            requestPermissions(permissions,PERMISSION_CODE);
+            Log.e("demo","permisson request");
+            boolean hasPermission = false;
+            for (String permission : permissions){
+                if(checkCallingPermission(permission) == PackageManager.PERMISSION_DENIED){
+                    requestPermissions(permissions,PERMISSION_CODE);
+                    return;
+                }
+                hasPermission = true;
+            }
+
+            if(hasPermission){
+                timerHander.sendEmptyMessageDelayed(0,2000);
+            }
         }else{
             timerHander.sendEmptyMessageDelayed(0,2000);
         }
@@ -65,6 +78,9 @@ public class SplashActivity extends AppCompatActivity {
                 break;
             }
         }
+
+        timerHander.sendEmptyMessageDelayed(0,2000);
+
     }
 
     private String getVersionInfo(){

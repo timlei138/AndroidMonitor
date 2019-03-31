@@ -39,6 +39,7 @@ public class FaceDetectHelper {
 
     private Size mPreviewSize;
 
+    //默认后置摄像头
     private int mCameraFacing = CameraCharacteristics.LENS_FACING_BACK;
 
     public FaceDetectHelper(Context context){
@@ -64,19 +65,21 @@ public class FaceDetectHelper {
             }
         }
         if(mDetectFaceMode == CaptureRequest.STATISTICS_FACE_DETECT_MODE_OFF){
-            Toast.makeText(mContext,"不支持人脸识别",Toast.LENGTH_SHORT).show();
+            Toast.makeText(mContext,"Device not support FaceDetect!",Toast.LENGTH_SHORT).show();
             Log.e(TAG,"Hardware not support face detect");
             return;
         }
-        //成想区域
+        //预览区域
         this.mPreviewSize = previewSize;
+        //camera成像区域
         Rect activeArraySizeRect = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-        float scaleWidth = mPreviewSize.getWidth() / activeArraySizeRect.width();
-        float scaleHeight = mPreviewSize.getHeight() / activeArraySizeRect.height();
+        Log.d(TAG,"PreviewSize:"+mPreviewSize.toString()+"Aspect Ratio = "+((float) mPreviewSize.getWidth()/ mPreviewSize.getHeight()));
+        Log.d(TAG,"ActiveArraySize"+activeArraySizeRect.toString()+",Aspec Ratio:"+((float)activeArraySizeRect.width() / activeArraySizeRect.height()));
+        float scaleWidth = (float)mPreviewSize.getWidth() / activeArraySizeRect.width();
+        float scaleHeight = (float)mPreviewSize.getHeight() / activeArraySizeRect.height();
         boolean mirror = (mCameraFacing == CameraCharacteristics.LENS_FACING_FRONT);
-        Log.d(TAG,"activeSize"+activeArraySizeRect.toString()+",scaleHeight:"+scaleHeight+",scaleWidth:"+scaleWidth);
+        Log.d(TAG,"scaleHeight:"+scaleHeight+",scaleWidth:"+scaleWidth+",mirror:"+mirror);
         mFaceDetectMatrix.setRotate(cameraSensorOrientation);
-
         if(mirror){
             mFaceDetectMatrix.postScale(-scaleWidth,scaleHeight);
         }else{
@@ -108,37 +111,28 @@ public class FaceDetectHelper {
 
     private void handleFace(TotalCaptureResult result ){
         Face[] faces = result.get(CaptureResult.STATISTICS_FACES);
+        Log.d(TAG,"find face count->"+(faces!=null ? faces.length:"0"));
         mFaceList.clear();
         for (Face face : faces){
             Rect bounds = face.getBounds();
-            Log.d(TAG,"bounds:"+bounds.toString());
             int left = bounds.left;
             int right = bounds.right;
             int top = bounds.top;
             int bottom = bounds.bottom;
-
             RectF rawRectF = new RectF(left,top,right,bottom);
-
             mFaceDetectMatrix.mapRect(rawRectF);
-
             RectF realRectF;
-
             if(mCameraFacing == CaptureRequest.LENS_FACING_FRONT){
                 realRectF = rawRectF;
             }else{
-                realRectF = new RectF(rawRectF.left,rawRectF.top - mPreviewSize.getWidth(),rawRectF.right,rawRectF.bottom-mPreviewSize.getHeight());
+                realRectF = new RectF(rawRectF.left,rawRectF.top - mPreviewSize.getWidth(),rawRectF.right,rawRectF.bottom-mPreviewSize.getWidth());
             }
             mFaceList.add(realRectF);
-
-            Log.d(TAG,"faceRect:"+realRectF.toString());
-
         }
 
-        if(mCallback != null && mFaceList.size() > 0){
+        if(mCallback != null){
             mCallback.showFace(faces,mFaceList);
         }
-
-        Log.d(TAG,"length:"+faces.length+",size:"+mFaceList.size());
     }
 
     /**
@@ -180,38 +174,7 @@ public class FaceDetectHelper {
     }
 
     public interface Callback{
-        void tackPictureSuccess();
         void showFace(Face[] faces ,List<RectF> realRectf);
     }
 
-    public Size getBestSize(int targetWidth, int targetHeight,int maxWidth,int maxHeight, List<Size> sizeList){
-        List<Size> bigEnough = new ArrayList();  //比指定宽高大的Size列表
-        List<Size> notBigEnough = new ArrayList(); //比指定宽高小的Size列表
-        for (Size size : sizeList) {
-            //宽<=最大宽度  &&  高<=最大高度  &&  宽高比 == 目标值宽高比
-            if (size.getWidth() <= maxWidth && size.getHeight() <= maxHeight
-                    && size.getWidth() == size.getHeight() * targetWidth / targetHeight) {
-                if (size.getWidth() >= targetWidth && size.getHeight() >= targetHeight)
-                    bigEnough.add(size);
-                else
-                    notBigEnough.add(size);
-            }
-            Log.d(TAG,"系统支持的尺寸: ${size.width} * ${size.height} ,  比例 ：${size.width.toFloat() / size.height}");
-        }
-
-        Log.d(TAG,"最大尺寸 ：$maxWidth * $maxHeight, 比例 ：${targetWidth.toFloat() / targetHeight}");
-        Log.d(TAG,"目标尺寸 ：$targetWidth * $targetHeight, 比例 ：${targetWidth.toFloat() / targetHeight}");
-
-        //选择bigEnough中最小的值  或 notBigEnough中最大的值
-
-        if(bigEnough.size() > 0){
-            Collections.min(bigEnough,new MonitorFragment.CompareSizesByArea());
-            return bigEnough.get(0);
-        }else if(notBigEnough.size() > 0){
-            Collections.max(notBigEnough,new MonitorFragment.CompareSizesByArea());
-            return notBigEnough.get(0);
-        }else{
-            return sizeList.get(0);
-        }
-    }
 }

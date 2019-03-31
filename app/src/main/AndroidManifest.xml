@@ -35,11 +35,6 @@
             android:authorities="com.lc.monitor.RecordProvider.record"
             android:exported="true" />
 
-        <activity
-            android:name=".ShowHistoryActivity"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:label="@string/title_activity_show_history"
-            android:theme="@style/FullscreenTheme"></activity>
     </application>
 
 </manifest>

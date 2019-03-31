@@ -3,9 +3,11 @@ package com.lc.monitor;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
+import android.support.design.widget.TabLayout;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
@@ -78,9 +80,10 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void switchFragment(int position){
+        Log.d("demo","size:"+(mFragmentManager.getFragments() != null ? mFragmentManager.getFragments().size():0));
         if(position == 0 && mFragmentManager.getFragments() == null
                 && mFragmentManager.getFragments().size() ==0){
-            mFragmentManager.beginTransaction().add(R.id.content,mFragmentList.get(0)).commitNow();
+            mFragmentManager.beginTransaction().add(R.id.content,mFragmentList.get(0)).commit();
         }else{
             mFragmentManager.beginTransaction().replace(R.id.content,mFragmentList.get(position)).commit();
         }

@@ -11,10 +11,14 @@ import android.support.v7.preference.PreferenceFragmentCompat;
 import android.util.Log;
 import android.view.View;
 
+import com.lc.monitor.CommCont;
 import com.lc.monitor.R;
 import com.lc.monitor.ToolsCallback;
 
-public class SettingsFragment extends PreferenceFragmentCompat implements ToolsCallback,SharedPreferences.OnSharedPreferenceChangeListener {
+import static com.lc.monitor.CommCont.SHAREDPREFS_NAME;
+
+public class SettingsFragment extends PreferenceFragmentCompat implements ToolsCallback,
+        SharedPreferences.OnSharedPreferenceChangeListener {
 
     private String TAG = getClass().getSimpleName();
     private ListPreference mRecordPreference;
@@ -30,16 +34,16 @@ public class SettingsFragment extends PreferenceFragmentCompat implements ToolsC
 
     @Override
     public void onCreatePreferences(Bundle bundle, String s) {
-        getPreferenceManager().setSharedPreferencesName("app_setting");
+        getPreferenceManager().setSharedPreferencesName(CommCont.SHAREDPREFS_NAME);
         addPreferencesFromResource(R.xml.setting_pref);
-        mRecordPreference = (ListPreference) findPreference("pref_record_time");
-        mStoragePreference = (EditTextPreference) findPreference("pref_storage");
-        mMonitorNamePreference = (EditTextPreference) findPreference("pref_monitor_name");
+        mRecordPreference = (ListPreference) findPreference(CommCont.SP_KEY_RECORD_TIME);
+        mStoragePreference = (EditTextPreference) findPreference(CommCont.SP_KEY_STORAGE);
+        mMonitorNamePreference = (EditTextPreference) findPreference(CommCont.SP_KEY_MONITOR_NAME);
         mSp = getPreferenceManager().getSharedPreferences();
         getPreferenceManager().getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
 
-        String storagePath = mSp.getString("pref_storage",getString(R.string.pref_title_storage_hint));
-        String monitorName = mSp.getString("pref_monitor_name",getString(R.string.pref_title_storage_name_hint));
+        String storagePath = mSp.getString(CommCont.SP_KEY_STORAGE,getString(R.string.pref_title_storage_hint));
+        String monitorName = mSp.getString(CommCont.SP_KEY_MONITOR_NAME,getString(R.string.pref_title_storage_name_hint));
         mStoragePreference.setSummary(storagePath);
         mMonitorNamePreference.setSummary(monitorName);
         updateRecordTime();
@@ -58,7 +62,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements ToolsC
     }
 
     private void updateRecordTime(){
-        String value = mSp.getString("pref_record_time","30");
+        String value = mSp.getString(CommCont.SP_KEY_RECORD_TIME,"30");
         CharSequence[] entrys = mRecordPreference.getEntryValues();
         int position = 0;
         for (int i=0;i<entrys.length;i++){
@@ -67,7 +71,6 @@ public class SettingsFragment extends PreferenceFragmentCompat implements ToolsC
                 break;
             }
         }
-        Log.d(TAG,"position:"+position);
         CharSequence entry = mRecordPreference.getEntries()[position];
         mRecordPreference.setSummary(entry);
     }
@@ -80,6 +83,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements ToolsC
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        Log.d(TAG,"onSharedPreferenceChanged key=>"+key);
         if(key == mRecordPreference.getKey()){
             updateRecordTime();
         }else if(key == mStoragePreference.getKey()){

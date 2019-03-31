@@ -40,7 +40,7 @@ public class RecordCursor extends CursorWrapper {
             String path = cursor.getString(pathIndex);
             record = new Record(id,name,type,faceCount,date,path);
             mList.add(record);
-            Log.d("Record:",record.toString());
+            //Log.d("Record:",record.toString());
         }
     }
 

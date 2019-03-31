@@ -1,12 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-
-    <!-- Declare custom theme attributes that allow changing which styles are
-         used for button bars depending on the API level.
-         ?android:attr/buttonBarStyle is new as of API 11 so this is
-         necessary to support previous API levels. -->
-    <declare-styleable name="ButtonBarContainerTheme">
-        <attr name="metaButtonBarStyle" format="reference" />
-        <attr name="metaButtonBarButtonStyle" format="reference" />
+    <declare-styleable name="SettingEditor">
+        <attr name="editor_icon" format="reference"/>
+        <attr name="switch_stats" format="boolean"/>
+        <attr name="editor_hint" format="string"/>
+        <attr name="input_type" format="enum">
+            <enum name="email" value="0"/>
+            <enum name="phone" value="1"/>
+        </attr>
     </declare-styleable>
-
 </resources>

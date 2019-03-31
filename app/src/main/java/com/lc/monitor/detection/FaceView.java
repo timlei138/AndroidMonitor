@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
 
 import java.util.ArrayList;
@@ -39,21 +40,22 @@ public class FaceView extends View {
         mPaint.setAntiAlias(true);
         mPaint.setColor(mRectColor);
         mPaint.setStyle(Paint.Style.STROKE);
-        mPaint.setStrokeWidth(12);
+        mPaint.setStrokeWidth(4);
         mFaceRectList = new ArrayList<>();
     }
 
     public void setFaceRect(List<RectF> faces){
         mFaceRectList.clear();
-        mFaceRectList = faces;
-        invalidate();
+        if(faces != null || faces.size() > 0){
+            mFaceRectList.addAll(faces);
+        }
+        postInvalidate();
     }
 
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-
         for (RectF rectF : mFaceRectList){
             canvas.drawRect(rectF,mPaint);
         }

@@ -8,6 +8,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.ImageFormat;
 import android.graphics.Matrix;
 import android.graphics.RectF;
 import android.graphics.SurfaceTexture;
@@ -20,17 +21,22 @@ import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.Face;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
+import android.media.ImageReader;
 import android.media.MediaRecorder;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v13.app.FragmentCompat;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentManager;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.util.Size;
@@ -47,13 +53,14 @@ import android.widget.Toast;
 import com.lc.monitor.CommCont;
 import com.lc.monitor.R;
 import com.lc.monitor.ToolsCallback;
-
+import com.lc.monitor.utils.ImageUtils;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.EventListener;
 import java.util.List;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
@@ -134,8 +141,15 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
 
     private FaceView mFaceView;
     private FaceDetectHelper mFaceDetechHelper;
+    private ImageReader mImageReader;
 
     private int mDisplayRotation; //手机方向
+
+    private static boolean startWatch = false;
+
+    private int tackPictureCount  = 0;
+
+    private boolean isTacking = false;
 
     @Nullable
     @Override
@@ -199,22 +213,80 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
         }
     }
 
+    private int faceCount = 0;
 
     private FaceDetectHelper.Callback faceCallback = new FaceDetectHelper.Callback() {
         @Override
-        public void tackPictureSuccess() {
-
-        }
-
-        @Override
         public void showFace(Face[] faces, final List<RectF> realRectf) {
-            getActivity().runOnUiThread(new Runnable() {
+            faceCount = realRectf != null ? realRectf.size() : 0;
+            if(startWatch && faceCount > 0){
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        mFaceView.setFaceRect(realRectf);
+                    }
+                });
+                if(!isTacking)
+                    tackPicture();
+            }
+        }
+    };
+
+    @Override
+    public void onClick(View v) {
+        if(!startWatch){
+            CountDownDialog countDownDialog = new CountDownDialog(new CountDownDialog.TickCallback() {
                 @Override
-                public void run() {
-                    mFaceView.setFaceRect(realRectf);
+                public void onFinishTick() {
+                    mMonitorBtn.setEnabled(true);
+                    mMonitorBtn.setText(R.string.monitor_progress);
                 }
             });
+            countDownDialog.showNow(getFragmentManager(),"CountDownDialog");
+        }else{
+            startWatch = false;
+            mMonitorBtn.setEnabled(true);
+            mMonitorBtn.setText(R.string.monitor_start);
+        }
 
+    }
+
+    private ImageReader.OnImageAvailableListener mImageAvailableListener = new ImageReader.OnImageAvailableListener() {
+        @Override
+        public void onImageAvailable(ImageReader reader) {
+            long starttime = System.currentTimeMillis();
+            Image image = reader.acquireNextImage();
+            ByteBuffer imageBuff = image.getPlanes()[0].getBuffer();
+            byte[] data = new byte[imageBuff.remaining()];
+            imageBuff.get(data);
+            image.close();
+            String savePath = ImageUtils.SaveImage(getContext(),data);
+            CommCont.insertRecord(getContext(),CommCont.TYPE_IMAGE,savePath,faceCount);
+            isTacking = false;
+            tackPictureCount++;
+            Log.d(TAG,"saveImage:"+savePath+",use time:"+((float)System.currentTimeMillis() - starttime)/1000);
+            Log.d(TAG,"tackPictureCount:"+tackPictureCount);
+            if(tackPictureCount < 2){
+                tackPicture();
+            }else{
+                startWatch = false;
+                tackPictureCount = 0;
+                startRecordingVideo();
+                long counttime = CommCont.getRecordTime(getContext());
+                Log.d(TAG,"record video count down time:"+counttime);
+                switchHandle.sendEmptyMessageDelayed(0,counttime * 1000);
+            }
+        }
+    };
+
+
+    Handler switchHandle = new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            Log.d(TAG,"the countdown time is coming stop record video");
+            stopRecordingVideo();
+            startWatch = true;
         }
     };
 
@@ -283,37 +355,15 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
      * @return The video size
      */
     private static Size chooseVideoSize(Size[] choices) {
-        /*
-        Size[] sizes = new Size[choices.length];
-        for (int i=0;i<choices.length;i++){
-            Size rawSize = choices[i];
-            Log.d(TAG,"video size->"+rawSize.toString());
-            if(orientation == Configuration.ORIENTATION_PORTRAIT){
-                if(rawSize.getWidth() > rawSize.getHeight()){
-                    sizes[i] = new Size(rawSize.getHeight(),rawSize.getWidth());
-                }else{
-                    sizes[i] = rawSize;
-                }
-            }else{
-                if(rawSize.getWidth() < rawSize.getHeight()){
-                    sizes[i] = new Size(rawSize.getHeight(),rawSize.getWidth());
-                }else{
-                    sizes[i] = rawSize;
-                }
-            }
-        }
-        */
-        return new Size(1280,720);
-        /*
         for (Size size : choices) {
+            Log.d(TAG,"videoSize:"+size.toString());
             if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
                 return size;
             }
         }
-
         Log.e(TAG, "Couldn't find any suitable video size");
         return choices[choices.length - 1];
-        */
+
     }
 
 
@@ -376,6 +426,11 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
             }
             configureTransform(width, height);
 
+
+            mImageReader = ImageReader.newInstance(mPreviewSize.getWidth(),mPreviewSize.getHeight(), ImageFormat.JPEG,1);
+
+            mImageReader.setOnImageAvailableListener(mImageAvailableListener,mBackgroundHandler);
+
             mFaceDetechHelper.init(characteristics,mPreviewSize,mSensorOrientation,mDisplayRotation);
 
             mMediaRecorder = new MediaRecorder();
@@ -414,6 +469,37 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
     }
 
     /**
+     * Start tack picture
+     */
+
+    private void tackPicture(){
+        if(mCameraDevice == null || mTextureView == null || !mTextureView.isAvailable()){
+            Log.e(TAG,"Can't take picture return!");
+            return;
+        }
+        isTacking = true;
+        try {
+            CaptureRequest.Builder builder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            if(mImageReader == null){
+                Log.e(TAG,"takPicture error!");
+                return;
+            }
+            builder.addTarget(mImageReader.getSurface());
+            builder.set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_AUTO);
+            builder.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH);
+            builder.set(CaptureRequest.JPEG_ORIENTATION,mSensorOrientation);
+            if(mPreviewSession == null){
+              Toast.makeText(getContext(),"拍照异常！",Toast.LENGTH_SHORT).show();
+            }else
+                mPreviewSession.capture(builder.build(),null,mBackgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+            Log.e(TAG,"Can't take picture");
+
+        }
+    }
+
+    /**
      * Start the camera preview.
      */
     private void startPreview() {
@@ -429,8 +515,7 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
 
             Surface previewSurface = new Surface(texture);
             mPreviewBuilder.addTarget(previewSurface);
-
-            mCameraDevice.createCaptureSession(Collections.singletonList(previewSurface),
+            mCameraDevice.createCaptureSession(Arrays.asList(previewSurface,mImageReader.getSurface()),
                     new CameraCaptureSession.StateCallback() {
 
                         @Override
@@ -475,7 +560,7 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
     }
 
     private void setFaceDetectRequestBuild(CaptureRequest.Builder build){
-        if(mFaceDetechHelper.canFaceDetect()){
+        if(mFaceDetechHelper.canFaceDetect() && !mIsRecordingVideo){
             build.set(CaptureRequest.STATISTICS_FACE_DETECT_MODE, CameraCharacteristics.STATISTICS_FACE_DETECT_MODE_SIMPLE);
         }
     }
@@ -512,6 +597,7 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
     }
 
     private void setUpMediaRecorder() throws IOException {
+        Log.d(TAG,"setUpMediaRecorder");
         final Activity activity = getActivity();
         if (null == activity) {
             return;
@@ -541,12 +627,18 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
     }
 
     private String getVideoFilePath(Context context) {
-        final File dir = context.getExternalFilesDir(null);
-        return (dir == null ? "" : (dir.getAbsolutePath() + "/"))
-                + System.currentTimeMillis() + ".mp4";
+        String dir = CommCont.getMediaDir(context,CommCont.TYPE_VIDEO);
+        File videoFile = new File(dir,System.currentTimeMillis()+".mp4");
+        try {
+            videoFile.createNewFile();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return videoFile.getAbsolutePath();
     }
 
     private void startRecordingVideo() {
+        Log.d(TAG,"startRecordingVideo");
         if (null == mCameraDevice || !mTextureView.isAvailable() || null == mPreviewSize) {
             return;
         }
@@ -581,7 +673,8 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
                         @Override
                         public void run() {
                             // UI
-                            mMonitorBtn.setText(R.string.monitor_stop);
+                            mMonitorBtn.setText(R.string.record_progress);
+                            mMonitorBtn.setEnabled(false);
                             mIsRecordingVideo = true;
 
                             // Start recording
@@ -614,37 +707,30 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
     private void stopRecordingVideo() {
         // UI
         mIsRecordingVideo = false;
-        mMonitorBtn.setText(R.string.monitor_stop);
+        mMonitorBtn.setText(R.string.monitor_progress);
+        mMonitorBtn.setEnabled(true);
+        if(mPreviewSession!=null) {
+            try {
+                mPreviewSession.abortCaptures();
+                mPreviewSession.stopRepeating();
+            } catch (CameraAccessException e) {
+                e.printStackTrace();
+            }
+        }
         // Stop recording
         mMediaRecorder.stop();
         mMediaRecorder.reset();
-
-        Activity activity = getActivity();
-        if (null != activity) {
-            Toast.makeText(activity, "Video saved: " + mNextVideoAbsolutePath,
-                    Toast.LENGTH_SHORT).show();
-            Log.d(TAG, "Video saved: " + mNextVideoAbsolutePath);
-        }
+        Log.d(TAG, "Video saved: " + mNextVideoAbsolutePath);
+        CommCont.insertRecord(getContext(),CommCont.TYPE_VIDEO,mNextVideoAbsolutePath,0);
         mNextVideoAbsolutePath = null;
-        startPreview();
-    }
 
-    @Override
-    public void onClick(View v) {
-        ContentValues values = new ContentValues();
-        values.put(CommCont.FILED_TYPE,0);
-        values.put(CommCont.FILED_DATE,0);
-        values.put(CommCont.FILED_NAME,"Test");
-        values.put(CommCont.FILED_FACE_COUNT,1);
-        values.put(CommCont.FILE_PATH,Environment.getDownloadCacheDirectory().getAbsolutePath());
-        getContext().getContentResolver().insert(CommCont.CONTENT_URI,values);
+        startPreview();
     }
 
     /**
      * Compares two {@code Size}s based on their areas.
      */
     static class CompareSizesByArea implements Comparator<Size> {
-
         @Override
         public int compare(Size lhs, Size rhs) {
             // We cast here to ensure the multiplications won't overflow
@@ -652,6 +738,75 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
                     (long) rhs.getWidth() * rhs.getHeight());
         }
 
+    }
+
+    public static class CountDownDialog extends DialogFragment{
+
+        private CountDownTimer mCountDownTimer;
+
+        private AlertDialog mInstance;
+
+        private TickCallback callback;
+
+        public CountDownDialog(){}
+
+        public CountDownDialog(TickCallback callback){
+            this.callback = callback;
+        }
+
+
+        @Override
+        public void onCreate(@Nullable Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+
+            mCountDownTimer = new CountDownTimer(10000,1000) {
+                @Override
+                public void onTick(long millisUntilFinished) {
+                    mInstance.setMessage("监控将于"+(millisUntilFinished / 1000)+"S后开启");
+                }
+
+                @Override
+                public void onFinish() {
+                    startWatch = true;
+                    if(callback!=null){
+                        callback.onFinishTick();
+                    }
+                    if(mInstance!=null){
+                        mInstance.dismiss();
+                    }
+                }
+            };
+        }
+
+        @NonNull
+        @Override
+        public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setTitle("监控倒计时");
+            builder.setMessage("监控将于10S后开启");
+            builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    if(mCountDownTimer!= null){
+                        mCountDownTimer.cancel();
+                        dialog.dismiss();
+                    }
+                }
+            });
+            mInstance = builder.create();
+            return mInstance;
+        }
+
+        @Override
+        public void showNow(FragmentManager manager, String tag) {
+            super.showNow(manager, tag);
+            mCountDownTimer.start();
+        }
+
+
+        public interface TickCallback {
+            void onFinishTick();
+        }
     }
 
     @Override

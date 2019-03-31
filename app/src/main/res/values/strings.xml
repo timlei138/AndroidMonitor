@@ -17,7 +17,7 @@
     <string name="pref_title_abount">关于本软件</string>
 
     <string name="monitor_start">开始监控</string>
-    <string name="monitor_stop">停止监控</string>
+    <string name="record_progress">录像中</string>
     <string name="monitor_progress">监控中</string>
     <string name="camera_error">Camera 出现错误</string>
 

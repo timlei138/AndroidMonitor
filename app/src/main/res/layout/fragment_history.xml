@@ -7,6 +7,10 @@
     <GridView
         android:id="@+id/historyLayout"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:verticalSpacing="2dp"
+        android:horizontalSpacing="2dp"
+        android:columnWidth="65dp"
+        android:numColumns="3"/>
 
 </FrameLayout>

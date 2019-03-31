@@ -9,12 +9,14 @@
             android:key="pref_alert_phone"
             android:layout="@layout/setting_editor"
             apps:editor_icon="@drawable/ic_sms_black_24dp"
-            apps:editor_hint="@string/pref_title_alert_phone_hint"/>
+            apps:editor_hint="@string/pref_title_alert_phone_hint"
+            apps:input_type="phone"/>
         <com.lc.monitor.settings.CustomEditPreference
             android:key="pref_alert_email"
             android:layout="@layout/setting_editor"
             apps:editor_icon="@drawable/ic_email_black_24dp"
-            apps:editor_hint="@string/pref_title_alert_email_hint"/>
+            apps:editor_hint="@string/pref_title_alert_email_hint"
+            apps:input_type="email"/>
 
     </PreferenceCategory>
 
