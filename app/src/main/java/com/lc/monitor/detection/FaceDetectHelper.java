@@ -15,6 +15,7 @@ import android.telecom.Call;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
+import android.view.View;
 import android.widget.Toast;
 
 import java.util.ArrayList;
@@ -38,6 +39,8 @@ public class FaceDetectHelper {
     private List<RectF> mFaceList;
 
     private Size mPreviewSize;
+
+    private int mPreviewTop = 0;
 
     //默认后置摄像头
     private int mCameraFacing = CameraCharacteristics.LENS_FACING_BACK;
@@ -125,9 +128,10 @@ public class FaceDetectHelper {
             if(mCameraFacing == CaptureRequest.LENS_FACING_FRONT){
                 realRectF = rawRectF;
             }else{
-                realRectF = new RectF(rawRectF.left,rawRectF.top - mPreviewSize.getWidth(),rawRectF.right,rawRectF.bottom-mPreviewSize.getWidth());
+                realRectF = new RectF(rawRectF.left,rawRectF.top - mPreviewSize.getWidth()-mPreviewTop,rawRectF.right,rawRectF.bottom-mPreviewSize.getWidth()-mPreviewTop);
             }
             mFaceList.add(realRectF);
+            Log.d(TAG,"realRectF:"+realRectF.toString());
         }
 
         if(mCallback != null){
@@ -162,10 +166,17 @@ public class FaceDetectHelper {
     }
 
 
-    public void tackPicture(){
-        //create
+    public float getFaceDetectAspecRatio(CameraCharacteristics cameraCharacteristics){
+        Rect activeArraySizeRect = cameraCharacteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+        return (float)activeArraySizeRect.width() / activeArraySizeRect.height();
     }
 
+
+    public void setPreViewTopSize(View view){
+        int[] loc = new int[2];
+        view.getLocationInWindow(loc);
+        mPreviewTop = loc[1];
+    }
 
     private Callback mCallback;
 

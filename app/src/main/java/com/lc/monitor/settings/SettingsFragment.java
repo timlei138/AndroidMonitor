@@ -8,17 +8,19 @@ import android.support.v7.preference.EditTextPreference;
 import android.support.v7.preference.ListPreference;
 import android.support.v7.preference.Preference;
 import android.support.v7.preference.PreferenceFragmentCompat;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 
 import com.lc.monitor.CommCont;
 import com.lc.monitor.R;
 import com.lc.monitor.ToolsCallback;
+import com.lc.monitor.utils.Utils;
 
 import static com.lc.monitor.CommCont.SHAREDPREFS_NAME;
 
 public class SettingsFragment extends PreferenceFragmentCompat implements ToolsCallback,
-        SharedPreferences.OnSharedPreferenceChangeListener {
+        SharedPreferences.OnSharedPreferenceChangeListener, Preference.OnPreferenceChangeListener {
 
     private String TAG = getClass().getSimpleName();
     private ListPreference mRecordPreference;
@@ -44,8 +46,10 @@ public class SettingsFragment extends PreferenceFragmentCompat implements ToolsC
 
         String storagePath = mSp.getString(CommCont.SP_KEY_STORAGE,getString(R.string.pref_title_storage_hint));
         String monitorName = mSp.getString(CommCont.SP_KEY_MONITOR_NAME,getString(R.string.pref_title_storage_name_hint));
-        mStoragePreference.setSummary(storagePath);
-        mMonitorNamePreference.setSummary(monitorName);
+
+        mStoragePreference.setSummary(TextUtils.isEmpty(storagePath) ? getString(R.string.pref_title_storage_name_hint):storagePath);
+        mMonitorNamePreference.setSummary(TextUtils.isEmpty(monitorName) ? getString(R.string.pref_title_storage_name_hint):monitorName);
+        mMonitorNamePreference.setOnPreferenceChangeListener(this);
         updateRecordTime();
     }
 
@@ -91,5 +95,18 @@ public class SettingsFragment extends PreferenceFragmentCompat implements ToolsC
         }else if(key == mMonitorNamePreference.getKey()){
 
         }
+    }
+
+    @Override
+    public boolean onPreferenceChange(Preference preference, Object o) {
+        if(preference == mMonitorNamePreference){
+            String value = (String) o;
+            mMonitorNamePreference.setSummary(TextUtils.isEmpty(value) ? getString(R.string.pref_title_storage_name_hint):value);
+        }else if(preference == mStoragePreference){
+            String value = (String) o;
+            mStoragePreference.setSummary(TextUtils.isEmpty(value) ? getString(R.string.pref_title_storage_name_hint):value);
+            CommCont.checkFileDirs(getContext());
+        }
+        return true;
     }
 }

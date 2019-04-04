@@ -3,6 +3,7 @@ package com.lc.monitor.history;
 import android.content.Context;
 import android.support.v4.app.FragmentManager;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -87,8 +88,12 @@ public class HistoryItemAdapter extends BaseAdapter{
 
 
     private String getSimpleName(String name){
-        SimpleDateFormat sf = new SimpleDateFormat("yyyymmdd-MMss");
-        return sf.format(new Date(Long.valueOf(name.substring(0,name.indexOf(".")))));
+        Log.d("demo","name:"+name);
+        String tmp = name.substring(0,name.lastIndexOf("."));
+        String date = tmp.substring(tmp.lastIndexOf("-")+1,tmp.length());
+        SimpleDateFormat sf = new SimpleDateFormat("yyyyMMddmmss");
+        String time = sf.format(new Date(Long.valueOf(date)));
+        return tmp.substring(0,tmp.lastIndexOf("-")) + time;
     }
 
     class ViewHolder{

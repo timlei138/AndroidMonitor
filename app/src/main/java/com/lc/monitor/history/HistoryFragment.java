@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -117,10 +118,23 @@ public class HistoryFragment extends Fragment implements ToolsCallback, AdapterV
        Intent intent = new Intent();
        intent.setAction(Intent.ACTION_VIEW);
        Record record = (Record) mAdapter.getItem(position);
-       if(record.getType() == CommCont.TYPE_VIDEO)
-           intent.setDataAndType(Uri.fromFile(new File(record.getFile())),"video/*");
-       else
-           intent.setDataAndType(Uri.fromFile(new File(record.getFile())),"image/*");
+       if(record.getType() == CommCont.TYPE_VIDEO){
+           if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+               intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+               intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+               intent.setDataAndType(FileProvider.getUriForFile(getContext(),"com.lc.monitor.FileProvider",new File(record.getFile())),"video/*");
+           }else{
+               intent.setDataAndType(Uri.fromFile(new File(record.getFile())),"video/*");
+           }
+       } else{
+           if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
+               intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+               intent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+               intent.setDataAndType(FileProvider.getUriForFile(getContext(),"com.lc.monitor.FileProvider",new File(record.getFile())),"image/*");
+           }else{
+               intent.setDataAndType(Uri.fromFile(new File(record.getFile())),"image/*");
+           }
+       }
        startActivity(intent);
     }
 }

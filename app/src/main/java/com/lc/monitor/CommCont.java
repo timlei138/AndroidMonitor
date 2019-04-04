@@ -5,10 +5,12 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Environment;
-import android.support.annotation.IntDef;
+import android.text.TextUtils;
 import android.util.Log;
 
 import java.io.File;
+import java.util.List;
+import java.util.Properties;
 
 public class CommCont {
 
@@ -45,6 +47,12 @@ public class CommCont {
 
     private static final String VIDEO_DIR = "video";
 
+
+    //email
+    public static final String SENDER_EMAIL_ADDRESS = "*****@qq.com"; //发送者邮箱，支持QQ，网易。需要进入邮箱进行STMP或者POP3 配置
+    public static final String SENDER_EMAIL_ACCOUNT = "*****@qq.com";
+    public static final String SENDER_EMAIL_AUTH = "fmxlddnveipxbehi"; //密码或者认证码，具体看邮件提供商要求
+    public static final String SENDER_EMAIL_FROMNAME = "*****";
 
 
 
@@ -84,10 +92,11 @@ public class CommCont {
 
     public static void insertRecord(Context context,int type,String savePath,int faceCount){
         String fileName = savePath.substring(savePath.lastIndexOf(File.separator)+1,savePath.length());
-        String date = fileName.substring(0,fileName.lastIndexOf("."));
+        String tmp = fileName.substring(0,fileName.lastIndexOf("."));
+        String date = tmp.substring(tmp.lastIndexOf("_")+1,tmp.length());
         ContentValues values = new ContentValues();
         values.put(FILED_NAME,fileName);
-        values.put(FILED_DATE,Long.valueOf(date));
+        values.put(FILED_DATE,date);
         values.put(FILE_PATH,savePath);
         values.put(FILED_TYPE,type);
         values.put(FILED_FACE_COUNT,faceCount);
@@ -95,11 +104,37 @@ public class CommCont {
     }
 
 
+    public static String getWatchEmail(Context context){
+        SharedPreferences sharedPreferences = context.getSharedPreferences(SHAREDPREFS_NAME,Context.MODE_PRIVATE);
+        return sharedPreferences.getString("pref_alert_email_value","");
+    }
+
+    public static boolean isWatchEmailEnable(Context context){
+        SharedPreferences sharedPreferences = context.getSharedPreferences(SHAREDPREFS_NAME,Context.MODE_PRIVATE);
+        return sharedPreferences.getBoolean("pref_alert_email_toggle",false);
+    }
+
+    public static String getWatchPhone(Context context){
+        SharedPreferences sharedPreferences = context.getSharedPreferences(SHAREDPREFS_NAME,Context.MODE_PRIVATE);
+        return sharedPreferences.getString("pref_alert_email_value","");
+    }
+
+    public static boolean isWatchPhoneEnable(Context context){
+        SharedPreferences sharedPreferences = context.getSharedPreferences(SHAREDPREFS_NAME,Context.MODE_PRIVATE);
+        return sharedPreferences.getBoolean("pref_alert_email_toggle",false);
+    }
 
 
     public static long getRecordTime(Context context){
         SharedPreferences sharedPreferences = context.getSharedPreferences(SHAREDPREFS_NAME,Context.MODE_PRIVATE);
         return Long.parseLong(sharedPreferences.getString(SP_KEY_RECORD_TIME,"30"));
     }
+
+    public static String getRecordName(Context context){
+        SharedPreferences sharedPreferences = context.getSharedPreferences(SHAREDPREFS_NAME,Context.MODE_PRIVATE);
+        String value = sharedPreferences.getString(SP_KEY_MONITOR_NAME,"");
+        return TextUtils.isEmpty(value) ? "monitor" : value;
+    }
+
 
 }

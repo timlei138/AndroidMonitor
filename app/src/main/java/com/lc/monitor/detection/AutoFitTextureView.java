@@ -2,6 +2,7 @@ package com.lc.monitor.detection;
 
 import android.content.Context;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.TextureView;
 
 public class AutoFitTextureView extends TextureView {
@@ -43,6 +44,7 @@ public class AutoFitTextureView extends TextureView {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         int width = MeasureSpec.getSize(widthMeasureSpec);
         int height = MeasureSpec.getSize(heightMeasureSpec);
+        Log.d("","width:"+width+",height:"+height+",mRatioWidth:"+mRatioWidth+",mRatioHeight:"+mRatioHeight);
         if (0 == mRatioWidth || 0 == mRatioHeight) {
             setMeasuredDimension(width, height);
         } else {

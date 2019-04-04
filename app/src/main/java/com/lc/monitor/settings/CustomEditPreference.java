@@ -95,11 +95,16 @@ public class CustomEditPreference extends Preference {
         switchButton.setChecked(savedToggle);
 
         if(inputType == InputType.PHONE.getValue()){
-            mEditText.setInputType(android.text.InputType.TYPE_TEXT_VARIATION_PHONETIC);
+            mEditText.setInputType(android.text.InputType.TYPE_CLASS_PHONE);
         }
+        dataVaild = checkDataVaild(savedValue);
     }
 
 
+
+    private boolean checkDataVaild(String value){
+        return inputType == InputType.EMAIL.getValue() ? checkEmail(savedValue) : checkPhone(savedValue);
+    }
 
 
     private View.OnFocusChangeListener editorFocusChangedListener = new View.OnFocusChangeListener() {
@@ -113,13 +118,13 @@ public class CustomEditPreference extends Preference {
                     if(checkEmail(input)){
                         dataVaild = true;
                     }else{
-                        Toast.makeText(getContext(),"请输入正确的Email地址",Toast.LENGTH_SHORT).show();
+                        showAlertToast();
                     }
                 }else if(inputType == InputType.PHONE.getValue()){
                     if(checkPhone(input)){
                         dataVaild = true;
                     }else{
-                        Toast.makeText(getContext(),"请输入正确的电话号码",Toast.LENGTH_SHORT).show();
+                        showAlertToast();
                     }
                 }
                 if(dataVaild){
@@ -136,12 +141,28 @@ public class CustomEditPreference extends Preference {
     private CompoundButton.OnCheckedChangeListener checkChangedListener = new CompoundButton.OnCheckedChangeListener() {
         @Override
         public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-            if(savedToggle != isChecked && dataVaild){
+            Log.d(TAG,"OnCheckedChangeListener:"+isChecked);
+            dataVaild = checkDataVaild(savedValue);
+            if(!dataVaild){
+                showAlertToast();
+                buttonView.setChecked(false);
+                return;
+            }
+            if(savedToggle != isChecked){
                 mSharedPreference.edit().putBoolean(key+"_toggle",isChecked).commit();
                 savedToggle = isChecked;
             }
         }
     };
+
+
+    private void showAlertToast(){
+        if(inputType == InputType.EMAIL.getValue()){
+            Toast.makeText(getContext(),"请输入正确的Email地址",Toast.LENGTH_SHORT).show();
+        }else{
+            Toast.makeText(getContext(),"请输入正确的电话号码",Toast.LENGTH_SHORT).show();
+        }
+    }
 
     private boolean checkPhone(String phone){
         String regex = "^1([358][0-9]|4[579]|66|7[0135678]|9[89])[0-9]{8}$";

@@ -10,6 +10,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.lc.monitor.data.DataBaseHelper;
 
@@ -84,6 +85,7 @@ public class RecordProvider extends ContentProvider {
 
     @Override
     public Uri insert( Uri uri,  ContentValues values) {
+        Log.d("Provider","insert to db->"+values.toString());
         SQLiteDatabase db =  mDataBaseHelper.getWritableDatabase();
         long rowId = db.insert(CommCont.TABLE_NAME,"",values);
         if(rowId > 0){

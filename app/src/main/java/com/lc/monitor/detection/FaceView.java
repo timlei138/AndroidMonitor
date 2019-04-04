@@ -46,7 +46,7 @@ public class FaceView extends View {
 
     public void setFaceRect(List<RectF> faces){
         mFaceRectList.clear();
-        if(faces != null || faces.size() > 0){
+        if(faces != null && faces.size() > 0){
             mFaceRectList.addAll(faces);
         }
         postInvalidate();

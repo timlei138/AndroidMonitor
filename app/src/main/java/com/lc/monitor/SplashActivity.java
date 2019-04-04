@@ -20,6 +20,13 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 
+import com.lc.mail.EmailMessage;
+import com.lc.mail.tencent.TencentProtocolSmtp;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+
 public class SplashActivity extends AppCompatActivity {
 
     private String[] permissions = new String[]{
@@ -27,6 +34,8 @@ public class SplashActivity extends AppCompatActivity {
             Manifest.permission.CAMERA,
             Manifest.permission.READ_PHONE_STATE,
             Manifest.permission.ACCESS_NETWORK_STATE,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.SEND_SMS,
     };
 
     private int PERMISSION_CODE = 1000;
@@ -128,5 +137,7 @@ public class SplashActivity extends AppCompatActivity {
             finish();
         }
     };
+
+
 
 }

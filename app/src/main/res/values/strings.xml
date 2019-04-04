@@ -20,7 +20,9 @@
     <string name="record_progress">录像中</string>
     <string name="monitor_progress">监控中</string>
     <string name="camera_error">Camera 出现错误</string>
-
+    <string name="email_title">监控软件提醒</string>
+    <string name="email_message">软件监控中发现人脸图片，具体请看附件照片。</string>
+    <string name="sms_message">监控软件中发现人脸信息</string>
     <string-array name="record_title">
         <item>10秒</item>
         <item>30秒</item>

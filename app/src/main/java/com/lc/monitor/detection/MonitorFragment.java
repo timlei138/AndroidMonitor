@@ -3,10 +3,8 @@ package com.lc.monitor.detection;
 import android.Manifest;
 import android.app.Activity;
 import android.app.Dialog;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
@@ -21,19 +19,18 @@ import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.Face;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.CamcorderProfile;
+import android.media.CameraProfile;
 import android.media.Image;
 import android.media.ImageReader;
 import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.v13.app.FragmentCompat;
-import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.DialogFragment;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
@@ -53,7 +50,7 @@ import android.widget.Toast;
 import com.lc.monitor.CommCont;
 import com.lc.monitor.R;
 import com.lc.monitor.ToolsCallback;
-import com.lc.monitor.utils.ImageUtils;
+import com.lc.monitor.utils.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -151,6 +148,12 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
 
     private boolean isTacking = false;
 
+    private final int MSG_TACK_PICTURE = 10;
+    private final int MSG_START_RECORD = 11;
+    private final int MSG_STOP_RECORD = 12;
+    private final int MSG_START_PREVIEW = 13;
+
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -227,7 +230,8 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
                     }
                 });
                 if(!isTacking)
-                    tackPicture();
+                    //tackPicture();
+                    switchHandle.sendEmptyMessageDelayed(MSG_TACK_PICTURE,0);
             }
         }
     };
@@ -242,6 +246,7 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
                     mMonitorBtn.setText(R.string.monitor_progress);
                 }
             });
+
             countDownDialog.showNow(getFragmentManager(),"CountDownDialog");
         }else{
             startWatch = false;
@@ -250,6 +255,8 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
         }
 
     }
+
+    private List<File> savedImageList = new ArrayList<>();
 
     private ImageReader.OnImageAvailableListener mImageAvailableListener = new ImageReader.OnImageAvailableListener() {
         @Override
@@ -260,33 +267,66 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
             byte[] data = new byte[imageBuff.remaining()];
             imageBuff.get(data);
             image.close();
-            String savePath = ImageUtils.SaveImage(getContext(),data);
+            String savePath = Utils.SaveImage(getContext(),data);
+            savedImageList.add(new File(savePath));
             CommCont.insertRecord(getContext(),CommCont.TYPE_IMAGE,savePath,faceCount);
             isTacking = false;
             tackPictureCount++;
             Log.d(TAG,"saveImage:"+savePath+",use time:"+((float)System.currentTimeMillis() - starttime)/1000);
             Log.d(TAG,"tackPictureCount:"+tackPictureCount);
             if(tackPictureCount < 2){
-                tackPicture();
+                switchHandle.sendEmptyMessageDelayed(MSG_TACK_PICTURE,1000);
             }else{
-                startWatch = false;
-                tackPictureCount = 0;
-                startRecordingVideo();
-                long counttime = CommCont.getRecordTime(getContext());
-                Log.d(TAG,"record video count down time:"+counttime);
-                switchHandle.sendEmptyMessageDelayed(0,counttime * 1000);
+                switchHandle.sendEmptyMessageDelayed(MSG_START_RECORD,1000);
             }
         }
     };
 
 
+    private void alertEvent(){
+        if(CommCont.isWatchEmailEnable(getContext())){
+            Utils.sendEmail(getContext(),savedImageList);
+        }
+        if(CommCont.isWatchPhoneEnable(getContext())){
+            Utils.sendSms(getContext());
+        }
+    }
+
+
+
     Handler switchHandle = new Handler(){
         @Override
         public void handleMessage(Message msg) {
-            super.handleMessage(msg);
-            Log.d(TAG,"the countdown time is coming stop record video");
-            stopRecordingVideo();
-            startWatch = true;
+            Log.d(TAG,"switch Handled msg what:"+msg.what);
+            switch (msg.what){
+                case MSG_START_RECORD:
+                    startWatch = false;
+                    tackPictureCount = 0;
+                    mFaceView.setFaceRect(null);
+                    alertEvent();
+                    startRecordingVideo();
+                    long counttime = CommCont.getRecordTime(getContext());
+                    Log.d(TAG,"record video count down time:"+counttime);
+                    switchHandle.sendEmptyMessageDelayed(MSG_STOP_RECORD,counttime * 1000);
+                    break;
+                case MSG_STOP_RECORD:
+                    stopRecordingVideo();
+                    if(mPreviewSession != null){
+                        mPreviewSession.close();
+                        mPreviewSession = null;
+                    }
+                    switchHandle.sendEmptyMessageDelayed(MSG_START_PREVIEW,500);
+                    break;
+                case MSG_TACK_PICTURE:
+                    tackPicture();
+                    break;
+                case MSG_START_PREVIEW:
+                    startPreview();
+                    startWatch = true;
+                    break;
+            }
+
+
         }
     };
 
@@ -322,22 +362,27 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
 
     };
 
-    private static Size chooseOptimalSize(Size[] choices, int width, int height, Size aspectRatio) {
+    private Size chooseOptimalSize(Size[] choices, int width, int height, Size aspectRatio,float facedetectratio) {
         // Collect the supported resolutions that are at least as big as the preview Surface
-
-        for (Size size : choices){
-            Log.d(TAG,"previewSize->"+size);
-        }
-
         List<Size> bigEnough = new ArrayList<>();
         int w = aspectRatio.getWidth();
         int h = aspectRatio.getHeight();
         for (Size option : choices) {
+            Log.d(TAG,"PreviewSize->"+option.toString()+",ratio"+((float) option.getWidth() / option.getHeight()));
+
+            if(w == option.getWidth() && h == option.getHeight()){
+                return option;
+            }
+
             if (option.getHeight() == option.getWidth() * h / w &&
                     option.getWidth() >= width && option.getHeight() >= height) {
                 bigEnough.add(option);
             }
         }
+        for(Size size : bigEnough){
+            Log.d(TAG,"BigSize:"+size.toString());
+        }
+
         // Pick the smallest of those, assuming we found any
         if (bigEnough.size() > 0) {
             return Collections.min(bigEnough, new CompareSizesByArea());
@@ -354,9 +399,27 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
      * @param choices The list of available sizes
      * @return The video size
      */
-    private static Size chooseVideoSize(Size[] choices) {
+    private static Size chooseVideoSize(Size[] choices,int reqWidth,int reqHeight,int orienation,float ratio) {
+
+        int tmpWidth,tmpHeight;
+        if(orienation == Configuration.ORIENTATION_PORTRAIT){
+            tmpHeight = reqWidth;
+            tmpWidth = reqHeight;
+        }else{
+            tmpWidth = reqWidth;
+            tmpHeight = reqHeight;
+        }
         for (Size size : choices) {
-            Log.d(TAG,"videoSize:"+size.toString());
+
+            if(tmpHeight == size.getHeight() && tmpWidth == size.getWidth()){
+                return size;
+            }
+            float sizeRotio = (float) size.getWidth() / size.getHeight();
+            if((tmpHeight == size.getHeight() || tmpWidth == size.getWidth()) &&
+                    sizeRotio == ratio){
+                return size;
+            }
+            Log.d(TAG,"videoSize:"+size.toString()+",ratio:"+(float)size.getWidth()/size.getHeight());
             if (size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080) {
                 return size;
             }
@@ -414,10 +477,12 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
             if (map == null) {
                 throw new RuntimeException("Cannot get available preview/video sizes");
             }
-            mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class));
-            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
-                    width, height, mVideoSize);
             int orientation = getResources().getConfiguration().orientation;
+            float faceDetectRatio = mFaceDetechHelper.getFaceDetectAspecRatio(characteristics);
+            mVideoSize = chooseVideoSize(map.getOutputSizes(MediaRecorder.class),width,height,orientation,faceDetectRatio);
+            mPreviewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),
+                    width, height, mVideoSize,faceDetectRatio);
+            mFaceDetechHelper.setPreViewTopSize(mTextureView);
             Log.d(TAG,"mVideoSize:"+mVideoSize.toString()+",mPreviewSize:"+mPreviewSize.toString()+",width:"+width+",height:"+height+",orientation:"+orientation);
             if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
                 mTextureView.setAspectRatio(mPreviewSize.getWidth(), mPreviewSize.getHeight());
@@ -628,7 +693,8 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
 
     private String getVideoFilePath(Context context) {
         String dir = CommCont.getMediaDir(context,CommCont.TYPE_VIDEO);
-        File videoFile = new File(dir,System.currentTimeMillis()+".mp4");
+        String name = CommCont.getRecordName(context);
+        File videoFile = new File(dir,name+"-"+System.currentTimeMillis()+".mp4");
         try {
             videoFile.createNewFile();
         } catch (IOException e) {
@@ -724,7 +790,7 @@ public class MonitorFragment extends Fragment implements ToolsCallback, View.OnC
         CommCont.insertRecord(getContext(),CommCont.TYPE_VIDEO,mNextVideoAbsolutePath,0);
         mNextVideoAbsolutePath = null;
 
-        startPreview();
+        //startPreview();
     }
 
     /**

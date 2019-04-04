@@ -27,6 +27,7 @@
         android:gravity="center"
         android:padding="5dp"
         android:clickable="true"
+        android:textColor="@color/colorPrimaryDark"
         android:background="@drawable/bg_monitor_btn"/>
 
 </FrameLayout>
